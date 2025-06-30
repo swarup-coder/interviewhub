@@ -13,14 +13,6 @@ database connection string - postgresql://interviewhub_user:qvR9LcglfuZVYJLfu0uZ
 
 problems - 
 
-1. in the header, in which page , we are currently in, that should be highlighted , example -when we are in home page, then , 'experience' tab should be highlighted
+1. add a guest mode in the login , make guest mode name as = guest , password = 12345678 , gmail = guest@iiita.ac.in , so that , any user can login with the guest mode . if you found any user is not logged in , in any browser , then treat it as logged in with guest . i mean , no need to navigate to login page , automatically login in the browser with guest id
 
-2. in 'Share Your Interview Experience', when we search companies, then in the search results , their logos are not showing , check it .
-
-3. make a toggle option so that user can share experience ""Anonymously" , in that case, user's name will not be shown , it will show "Anonymous" 
-
-4. the '0 views 0 comments 0 upvotes' are not updating , do something so that how many time the that experience is showing on scrren should be refelected ,and user can comment , upvotes , and it should also be shown 
-
-5. make another table which is for me (Developer only) , how many times , my website will open that will be loaded here' , so that i can understand total views
-
-6. during sharing experience , when user add questions , then , when user adds topic , that topics are not adding correctly , make it more perfect . like no comma separation . make box , each box user can write one topic only , then click + option to add another topic name
+2. add a AI option in header , make the page , here we will use gemini API keys, it will mainly guide users to prepare for interviews of any specific companies ,it will give minimal , very small answer , and give 2-3 top coding questions most asked in that company .  use a chatgpt like interface for it , 
