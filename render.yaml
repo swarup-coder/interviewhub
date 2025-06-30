@@ -23,6 +23,8 @@ services:
         value: noreply@interviewhub.iiita.ac.in
       - key: FRONTEND_URL
         value: https://interviewhub-cyan.vercel.app
+      - key: GEMINI_API_KEY
+        sync: false
 
 # PostgreSQL Database
 databases:

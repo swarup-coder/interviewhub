@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Send, Bot, User, Sparkles, Building, Code, Target, Lightbulb } from 'lucide-react';
+import { X, Send, Bot, User, Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
+import api from '../../lib/api';
 
 interface Message {
   id: string;
   type: 'user' | 'ai';
   content: string;
   timestamp: Date;
+  fallback?: boolean;
 }
 
 interface AIInterviewPrepProps {
@@ -18,7 +20,7 @@ const AIInterviewPrep: React.FC<AIInterviewPrepProps> = ({ isOpen, onClose }) =>
     {
       id: '1',
       type: 'ai',
-      content: `Hi! I'm your AI Interview Preparation Assistant. 🤖
+      content: `Hi! I'm your AI Interview Preparation Assistant powered by Google Gemini. 🤖
 
 I can help you prepare for interviews at specific companies by providing:
 • Company-specific interview insights
@@ -34,6 +36,7 @@ Example: "Help me prepare for Google software engineer interview"`,
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -45,12 +48,33 @@ Example: "Help me prepare for Google software engineer interview"`,
   }, [messages]);
 
   const generateAIResponse = async (userMessage: string): Promise<string> => {
-    // Simulate AI response - In production, this would call Gemini API
-    const lowerMessage = userMessage.toLowerCase();
-    
-    // Company-specific responses
-    if (lowerMessage.includes('google')) {
-      return `🔍 **Google Interview Preparation**
+    try {
+      setError(null);
+      
+      // Send conversation history for context (last 10 messages)
+      const conversationHistory = messages.slice(-10).map(msg => ({
+        type: msg.type,
+        content: msg.content
+      }));
+
+      const response = await api.post('/ai/chat', {
+        message: userMessage,
+        conversationHistory
+      });
+
+      if (response.data.fallback) {
+        setError('Using fallback response - AI service temporarily unavailable');
+      }
+
+      return response.data.response;
+    } catch (error: any) {
+      console.error('AI API Error:', error);
+      
+      // Enhanced fallback based on user message
+      const lowerMessage = userMessage.toLowerCase();
+      
+      if (lowerMessage.includes('google')) {
+        return `🔍 **Google Interview Preparation**
 
 **Interview Process:**
 • Phone/Video screening (45 min)
@@ -59,24 +83,18 @@ Example: "Help me prepare for Google software engineer interview"`,
 
 **Top 3 Coding Questions:**
 1. **Two Sum** (Easy) - Array manipulation and hash maps
-2. **Longest Substring Without Repeating Characters** (Medium) - Sliding window technique
-3. **Merge k Sorted Lists** (Hard) - Divide and conquer, heap operations
+2. **Longest Substring Without Repeating Characters** (Medium) - Sliding window
+3. **Merge k Sorted Lists** (Hard) - Divide and conquer
 
 **Key Tips:**
-• Practice on LeetCode (focus on medium/hard problems)
+• Practice LeetCode medium/hard problems
 • Study system design fundamentals
 • Prepare STAR format behavioral stories
-• Know Google's products and culture
-
-**Technical Focus Areas:**
-• Data structures (arrays, trees, graphs)
-• Algorithms (sorting, searching, dynamic programming)
-• System design (for senior roles)
-• Code optimization and complexity analysis`;
-    }
-    
-    if (lowerMessage.includes('microsoft')) {
-      return `💻 **Microsoft Interview Preparation**
+• Know Google's products and culture`;
+      }
+      
+      if (lowerMessage.includes('microsoft')) {
+        return `💻 **Microsoft Interview Preparation**
 
 **Interview Process:**
 • Initial screening call
@@ -85,154 +103,27 @@ Example: "Help me prepare for Google software engineer interview"`,
 
 **Top 3 Coding Questions:**
 1. **Reverse Linked List** (Easy) - Pointer manipulation
-2. **Binary Tree Level Order Traversal** (Medium) - BFS/Queue usage
+2. **Binary Tree Level Order Traversal** (Medium) - BFS/Queue
 3. **Design LRU Cache** (Medium) - Hash map + doubly linked list
 
 **Key Tips:**
 • Emphasize teamwork and growth mindset
 • Practice system design scenarios
-• Know Microsoft's cloud services (Azure)
-• Prepare for behavioral questions about leadership
+• Know Microsoft's cloud services (Azure)`;
+      }
+      
+      // Generic fallback
+      setError('AI service temporarily unavailable - using cached response');
+      return `I'm having trouble connecting to the AI service right now. Here are some general interview tips:
 
-**Technical Focus Areas:**
-• Object-oriented programming
-• Database design and SQL
-• Cloud computing concepts
-• Software engineering best practices`;
+• **Practice Daily:** Solve coding problems on LeetCode/GeeksforGeeks
+• **Master Fundamentals:** Arrays, linked lists, trees, graphs, dynamic programming
+• **Behavioral Prep:** Prepare STAR method stories
+• **Company Research:** Study the company's products, culture, and recent news
+• **Mock Interviews:** Practice explaining your thought process out loud
+
+Try asking me again in a moment for AI-powered responses!`;
     }
-    
-    if (lowerMessage.includes('amazon')) {
-      return `📦 **Amazon Interview Preparation**
-
-**Interview Process:**
-• Online assessment (OA)
-• 4-5 rounds including bar raiser
-• Heavy focus on leadership principles
-
-**Top 3 Coding Questions:**
-1. **Two Sum** (Easy) - Hash table fundamentals
-2. **Number of Islands** (Medium) - DFS/BFS graph traversal
-3. **Merge Intervals** (Medium) - Array sorting and merging
-
-**Key Tips:**
-• Master Amazon's 16 Leadership Principles
-• Practice STAR method for behavioral questions
-• Focus on scalability in technical solutions
-• Prepare examples of customer obsession
-
-**Technical Focus Areas:**
-• Algorithms and data structures
-• System design and scalability
-• AWS services knowledge
-• Operational excellence mindset`;
-    }
-    
-    if (lowerMessage.includes('meta') || lowerMessage.includes('facebook')) {
-      return `👥 **Meta Interview Preparation**
-
-**Interview Process:**
-• Recruiter call
-• Technical phone screen
-• 4-5 onsite rounds (coding + system design)
-
-**Top 3 Coding Questions:**
-1. **Valid Parentheses** (Easy) - Stack operations
-2. **Add Binary** (Easy) - String manipulation
-3. **Binary Tree Vertical Order Traversal** (Medium) - Tree traversal with coordinates
-
-**Key Tips:**
-• Focus on building connections and impact
-• Practice system design for social platforms
-• Understand Meta's mission and products
-• Prepare for culture fit questions
-
-**Technical Focus Areas:**
-• Frontend and backend development
-• Database optimization
-• Distributed systems
-• Mobile development (React Native)`;
-    }
-    
-    // General coding questions
-    if (lowerMessage.includes('coding questions') || lowerMessage.includes('leetcode')) {
-      return `💡 **Essential Coding Questions for Interviews**
-
-**Easy Level (Master These First):**
-• Two Sum
-• Valid Parentheses
-• Merge Two Sorted Lists
-• Maximum Subarray
-• Best Time to Buy and Sell Stock
-
-**Medium Level (Core Interview Questions):**
-• Longest Substring Without Repeating Characters
-• 3Sum
-• Container With Most Water
-• Rotate Image
-• Group Anagrams
-
-**Hard Level (For Senior Positions):**
-• Merge k Sorted Lists
-• Trapping Rain Water
-• Median of Two Sorted Arrays
-• Word Ladder
-• Serialize and Deserialize Binary Tree
-
-**Practice Strategy:**
-1. Start with easy problems to build confidence
-2. Focus on understanding patterns, not memorizing
-3. Practice explaining your approach out loud
-4. Time yourself (aim for 20-30 minutes per problem)
-5. Review multiple solutions for each problem`;
-    }
-    
-    // General interview tips
-    if (lowerMessage.includes('tips') || lowerMessage.includes('advice')) {
-      return `🎯 **General Interview Preparation Tips**
-
-**Before the Interview:**
-• Research the company thoroughly
-• Practice coding on a whiteboard/paper
-• Prepare 3-5 behavioral stories using STAR method
-• Review your resume and be ready to discuss projects
-
-**During Technical Rounds:**
-• Think out loud - explain your approach
-• Ask clarifying questions
-• Start with a brute force solution, then optimize
-• Test your code with examples
-• Discuss time/space complexity
-
-**During Behavioral Rounds:**
-• Use specific examples with measurable impact
-• Show growth mindset and learning from failures
-• Demonstrate leadership and collaboration
-• Ask thoughtful questions about the role/team
-
-**Common Mistakes to Avoid:**
-• Jumping into coding without understanding the problem
-• Not testing your solution
-• Giving up too quickly on difficult problems
-• Not asking questions about the company/role`;
-    }
-    
-    // Default response
-    return `I'd be happy to help you prepare for your interview! 
-
-I can provide specific guidance for companies like:
-• **Google** - Algorithm-heavy interviews
-• **Microsoft** - Collaboration-focused rounds  
-• **Amazon** - Leadership principles emphasis
-• **Meta** - System design and social impact
-• **Apple** - Product-focused technical discussions
-
-Or I can help with:
-• **Coding Questions** - Top problems by difficulty
-• **Interview Tips** - Best practices and strategies
-• **System Design** - Architecture and scalability
-• **Behavioral Prep** - STAR method and stories
-
-What specific area would you like to focus on?`;
   };
 
   const handleSendMessage = async () => {
@@ -299,8 +190,12 @@ What specific area would you like to focus on?`;
     "Help me prepare for Google interview",
     "Top coding questions for FAANG",
     "System design interview tips",
-    "Behavioral interview preparation"
+    "Behavioral interview preparation",
+    "Microsoft interview process",
+    "Amazon leadership principles"
   ];
+
+  const clearError = () => setError(null);
 
   if (!isOpen) return null;
 
@@ -315,7 +210,7 @@ What specific area would you like to focus on?`;
             </div>
             <div>
               <h2 className="text-xl font-bold">AI Interview Preparation</h2>
-              <p className="text-purple-100 text-sm">Get personalized interview guidance</p>
+              <p className="text-purple-100 text-sm">Powered by Google Gemini</p>
             </div>
           </div>
           <button
@@ -325,6 +220,22 @@ What specific area would you like to focus on?`;
             <X className="w-6 h-6" />
           </button>
         </div>
+
+        {/* Error Banner */}
+        {error && (
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="w-5 h-5 text-yellow-600" />
+              <p className="text-yellow-800 text-sm">{error}</p>
+            </div>
+            <button
+              onClick={clearError}
+              className="text-yellow-600 hover:text-yellow-800"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
@@ -362,10 +273,15 @@ What specific area would you like to focus on?`;
                         </div>
                       )}
                     </div>
-                    <div className={`text-xs mt-2 ${
+                    <div className={`text-xs mt-2 flex items-center space-x-2 ${
                       message.type === 'user' ? 'text-blue-200' : 'text-gray-500'
                     }`}>
-                      {message.timestamp.toLocaleTimeString()}
+                      <span>{message.timestamp.toLocaleTimeString()}</span>
+                      {message.fallback && (
+                        <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">
+                          Fallback
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -380,10 +296,13 @@ What specific area would you like to focus on?`;
                   <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center">
                     <Bot className="w-4 h-4 text-white" />
                   </div>
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="flex items-center space-x-2">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    </div>
+                    <span className="text-sm text-gray-500">AI is thinking...</span>
                   </div>
                 </div>
               </div>
@@ -396,12 +315,12 @@ What specific area would you like to focus on?`;
         {messages.length <= 1 && (
           <div className="px-6 py-3 border-t border-gray-200 bg-white">
             <p className="text-sm text-gray-600 mb-3">Quick start prompts:</p>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {quickPrompts.map((prompt, index) => (
                 <button
                   key={index}
                   onClick={() => setInputMessage(prompt)}
-                  className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-left"
                 >
                   {prompt}
                 </button>
@@ -427,12 +346,16 @@ What specific area would you like to focus on?`;
               disabled={!inputMessage.trim() || isLoading}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
-              <Send className="w-4 h-4" />
-              <span>Send</span>
+              {isLoading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              <span>{isLoading ? 'Sending...' : 'Send'}</span>
             </button>
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            Press Enter to send, Shift+Enter for new line
+            Press Enter to send, Shift+Enter for new line • Powered by Google Gemini AI
           </p>
         </div>
       </div>

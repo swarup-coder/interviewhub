@@ -13,6 +13,7 @@ import companyRoutes from './routes/companies.js';
 import userRoutes from './routes/users.js';
 import questionRoutes from './routes/questions.js';
 import analyticsRoutes from './routes/analytics.js';
+import aiRoutes from './routes/ai.js';
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ app.use(cors({
     'http://localhost:5173',
     'http://localhost:3000',
     'https://interviewhub-wheat.vercel.app',
+    'https://interviewhub-cyan.vercel.app',
     process.env.FRONTEND_URL
   ].filter(Boolean),
   credentials: true,
@@ -53,6 +55,14 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
+// Special rate limiting for AI endpoints
+const aiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10, // limit each IP to 10 AI requests per minute
+  message: 'Too many AI requests, please wait a moment before trying again.',
+});
+app.use('/api/ai', aiLimiter);
+
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -65,7 +75,8 @@ app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    geminiConfigured: !!process.env.GEMINI_API_KEY
   });
 });
 
@@ -76,6 +87,7 @@ app.use('/api/companies', companyRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -89,6 +101,7 @@ app.get('/', (req, res) => {
       users: '/api/users',
       questions: '/api/questions',
       analytics: '/api/analytics',
+      ai: '/api/ai',
       health: '/health'
     }
   });
@@ -133,6 +146,13 @@ const startServer = async () => {
     if (!isHealthy) {
       console.log('🔧 Database needs initialization...');
       await initializeDatabase();
+    }
+
+    // Check Gemini API configuration
+    if (!process.env.GEMINI_API_KEY) {
+      console.warn('⚠️  GEMINI_API_KEY not configured - AI features will use fallback responses');
+    } else {
+      console.log('🤖 Gemini AI configured successfully');
     }
     
     // Start server
