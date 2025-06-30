@@ -207,9 +207,10 @@ export const insertSampleData = async () => {
       ON CONFLICT (name) DO NOTHING
     `);
 
-    // Insert sample users
+    // Insert guest user
     await query(`
       INSERT INTO users (email, password_hash, full_name, year_of_passing, branch, verified) VALUES
+      ('guest@iiita.ac.in', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj6hsxq/3Haa', 'Guest', 2024, 'Computer Science', true),
       ('john.doe@iiita.ac.in', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj6hsxq/3Haa', 'John Doe', 2024, 'Computer Science', true),
       ('jane.smith@iiita.ac.in', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj6hsxq/3Haa', 'Jane Smith', 2023, 'Information Technology', true),
       ('alex.johnson@iiita.ac.in', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj6hsxq/3Haa', 'Alex Johnson', 2024, 'Computer Science', true),

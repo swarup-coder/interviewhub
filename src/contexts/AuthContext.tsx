@@ -11,6 +11,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   sendOTP: (email: string) => Promise<void>;
   verifyOTP: (email: string, otp: string) => Promise<void>;
+  loginAsGuest: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,6 +24,16 @@ export const useAuth = (): AuthContextType => {
   return context;
 };
 
+// Guest user data
+const GUEST_USER: User = {
+  id: 'guest-user-id',
+  email: 'guest@iiita.ac.in',
+  full_name: 'Guest',
+  verified: true,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -31,10 +42,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const res = await api.get('/auth/me');
-        setUser(res.data);
-      } catch {
-        setUser(null);
+        const token = localStorage.getItem('auth_token');
+        const guestMode = localStorage.getItem('guest_mode');
+        
+        if (guestMode === 'true') {
+          // User is in guest mode
+          setUser(GUEST_USER);
+        } else if (token) {
+          // Try to get authenticated user
+          const res = await api.get('/auth/me');
+          setUser(res.data.user);
+        } else {
+          // No token and not in guest mode - auto-login as guest
+          await loginAsGuest();
+        }
+      } catch (error) {
+        console.error('Error loading user:', error);
+        // If there's an error and no guest mode, auto-login as guest
+        const guestMode = localStorage.getItem('guest_mode');
+        if (guestMode !== 'true') {
+          await loginAsGuest();
+        }
       } finally {
         setLoading(false);
       }
@@ -43,12 +71,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    // Clear guest mode when signing in with real account
+    localStorage.removeItem('guest_mode');
+    
     const res = await api.post('/auth/login', { email, password });
     localStorage.setItem('auth_token', res.data.token);
     setUser(res.data.user);
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
+    // Clear guest mode when signing up
+    localStorage.removeItem('guest_mode');
+    
     const res = await api.post('/auth/register', { email, password, fullName });
     localStorage.setItem('auth_token', res.data.token);
     setUser(res.data.user);
@@ -56,7 +90,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     localStorage.removeItem('auth_token');
-    setUser(null);
+    localStorage.removeItem('guest_mode');
+    // After sign out, auto-login as guest
+    await loginAsGuest();
+  };
+
+  const loginAsGuest = async () => {
+    try {
+      // Try to login with guest credentials
+      const res = await api.post('/auth/login', { 
+        email: 'guest@iiita.ac.in', 
+        password: '12345678' 
+      });
+      localStorage.setItem('auth_token', res.data.token);
+      localStorage.setItem('guest_mode', 'true');
+      setUser({ ...res.data.user, full_name: 'Guest' });
+    } catch (error) {
+      console.error('Guest login failed:', error);
+      // Fallback to local guest mode
+      localStorage.setItem('guest_mode', 'true');
+      localStorage.removeItem('auth_token');
+      setUser(GUEST_USER);
+    }
   };
 
   const sendOTP = (email: string) => api.post('/auth/send-otp', { email });
@@ -72,6 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signOut,
     sendOTP,
     verifyOTP,
+    loginAsGuest,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

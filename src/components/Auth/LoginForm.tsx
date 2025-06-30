@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, UserCheck } from 'lucide-react';
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -10,7 +10,7 @@ const LoginForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
-  const { signIn } = useAuth();
+  const { signIn, loginAsGuest } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,6 +44,21 @@ const LoginForm: React.FC = () => {
     }
   };
 
+  const handleGuestLogin = async () => {
+    setLoading(true);
+    setError('');
+    
+    try {
+      await loginAsGuest();
+      navigate('/');
+    } catch (error: any) {
+      console.error('Guest login error:', error);
+      setError('Guest login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
     if (error) setError('');
@@ -68,6 +83,34 @@ const LoginForm: React.FC = () => {
             </Link>
           </p>
         </div>
+
+        {/* Guest Login Option */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center space-x-3 mb-3">
+            <UserCheck className="w-5 h-5 text-blue-600" />
+            <h3 className="text-sm font-medium text-blue-900">Quick Access</h3>
+          </div>
+          <p className="text-sm text-blue-700 mb-3">
+            Want to explore without creating an account? Use guest mode to browse all features.
+          </p>
+          <button
+            onClick={handleGuestLogin}
+            disabled={loading}
+            className="w-full flex justify-center py-2 px-4 border border-blue-300 text-sm font-medium rounded-lg text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {loading ? 'Signing in as Guest...' : 'Continue as Guest'}
+          </button>
+        </div>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-gray-50 text-gray-500">Or sign in with your IIITA account</span>
+          </div>
+        </div>
+
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
